@@ -53,7 +53,7 @@ void init_charges(void)
 {
 	for (int i = 0; i < ROWS; i++)
 		for (int j = 0; j < COLS; j++)
-			g_charges[i][j] = (rand() % 3) - 1;
+			g_charges[i][j] = (rand() % 2) == 0 ? -1 : 1;
 }
 
 void zero_field(void)
