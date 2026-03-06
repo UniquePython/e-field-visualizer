@@ -21,12 +21,8 @@ void zero_grid(void)
 void draw_grid(void)
 {
 	for (int i = 0; i < ROWS; i++)
-	{
 		for (int j = 0; j < COLS; j++)
-		{
 			DrawRectangleLines(j * CELL_W, i * CELL_H, CELL_W, CELL_H, GRAY);
-		}
-	}
 }
 
 int main(void)
