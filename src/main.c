@@ -4,14 +4,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <stdbool.h>
 
 #define WIDTH 900
 #define HEIGHT 900
 
 #define ROWS 20
 #define COLS 20
-
-#define FONT_SIZE 12
 
 #define CELL_W ((WIDTH) / (COLS))
 #define CELL_H ((HEIGHT) / (ROWS))
@@ -31,11 +30,9 @@ void find_min_max(float *min, float *max)
 	for (int i = 0; i < ROWS; i++)
 		for (int j = 0; j < COLS; j++)
 		{
-			float magnitude = sqrtf(powf(g_field_x[i][j], 2.0f) + powf(g_field_y[i][j], 2.0f));
-
+			float magnitude = sqrtf(g_field_x[i][j] * g_field_x[i][j] + g_field_y[i][j] * g_field_y[i][j]);
 			if (magnitude > *max)
 				*max = magnitude;
-
 			if (magnitude < *min)
 				*min = magnitude;
 		}
@@ -49,11 +46,9 @@ float normalize(float min, float max, float val)
 	return (val - min) / delta;
 }
 
-void init_charges(void)
+void zero_charges(void)
 {
-	for (int i = 0; i < ROWS; i++)
-		for (int j = 0; j < COLS; j++)
-			g_charges[i][j] = (rand() % 2) == 0 ? -1 : 1;
+	memset(g_charges, 0, sizeof(g_charges));
 }
 
 void zero_field(void)
@@ -65,14 +60,13 @@ void zero_field(void)
 void update_field(void)
 {
 	for (int self_y = 0; self_y < ROWS; self_y++)
-	{
 		for (int self_x = 0; self_x < COLS; self_x++)
-		{
 			for (int other_y = 0; other_y < ROWS; other_y++)
-			{
 				for (int other_x = 0; other_x < COLS; other_x++)
 				{
 					if (other_y == self_y && other_x == self_x)
+						continue;
+					if (g_charges[other_y][other_x] == 0)
 						continue;
 
 					float r_sq = (other_x - self_x) * (other_x - self_x) + (other_y - self_y) * (other_y - self_y);
@@ -82,8 +76,28 @@ void update_field(void)
 					g_field_x[self_y][self_x] += (self_x - other_x) * field / r;
 					g_field_y[self_y][self_x] += (self_y - other_y) * field / r;
 				}
-			}
-		}
+}
+
+void handle_input(void)
+{
+	if (IsKeyPressed(KEY_R))
+		zero_charges();
+
+	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || IsMouseButtonPressed(MOUSE_RIGHT_BUTTON))
+	{
+		Vector2 mouse = GetMousePosition();
+		int col = (int)(mouse.x / CELL_W);
+		int row = (int)(mouse.y / CELL_H);
+
+		if (col < 0 || col >= COLS || row < 0 || row >= ROWS)
+			return;
+
+		float new_charge = IsMouseButtonPressed(MOUSE_LEFT_BUTTON) ? 1.0f : -1.0f;
+
+		if (g_charges[row][col] == new_charge)
+			g_charges[row][col] = 0;
+		else
+			g_charges[row][col] = new_charge;
 	}
 }
 
@@ -98,45 +112,49 @@ void draw_grid(void)
 			int x = j * CELL_W;
 			int y = i * CELL_H;
 
-			float magnitude = sqrtf(powf(g_field_x[i][j], 2.0f) + powf(g_field_y[i][j], 2.0f));
+			float magnitude = sqrtf(g_field_x[i][j] * g_field_x[i][j] + g_field_y[i][j] * g_field_y[i][j]);
 
-			// Heatmap
 			Color c = ColorLerp(BLACK, YELLOW, normalize(min, max, magnitude));
 			DrawRectangle(x, y, CELL_W, CELL_H, c);
-			// DrawRectangleLines(x, y, CELL_W, CELL_H, GRAY);
-
-			// Arrow
-			float cx = x + CELL_W / 2.0f;
-			float cy = y + CELL_H / 2.0f;
 
 			if (magnitude == 0)
 				continue;
 
-			float dx = (g_field_x[i][j] / magnitude) * ARROW_LEN;
-			float dy = (g_field_y[i][j] / magnitude) * ARROW_LEN;
+			if (g_charges[i][j] == 0)
+			{
+				float cx = x + CELL_W / 2.0f;
+				float cy = y + CELL_H / 2.0f;
 
-			Vector2 start = {cx, cy};
-			Vector2 end = {cx + dx, cy + dy};
+				float dx = (g_field_x[i][j] / magnitude) * ARROW_LEN;
+				float dy = (g_field_y[i][j] / magnitude) * ARROW_LEN;
 
-			DrawLineEx(start, end, ARROW_THICK, RAYWHITE);
+				Vector2 start = {cx, cy};
+				Vector2 end = {cx + dx, cy + dy};
 
-			float bx_r = dx * cosf(BARB_ANGLE) - dy * sinf(BARB_ANGLE);
-			float by_r = dx * sinf(BARB_ANGLE) + dy * cosf(BARB_ANGLE);
-			float bx_l = dx * cosf(-BARB_ANGLE) - dy * sinf(-BARB_ANGLE);
-			float by_l = dx * sinf(-BARB_ANGLE) + dy * cosf(-BARB_ANGLE);
+				DrawLineEx(start, end, ARROW_THICK, RAYWHITE);
 
-			Vector2 barb_r = {end.x + bx_r * BARB_LEN / ARROW_LEN, end.y + by_r * BARB_LEN / ARROW_LEN};
-			Vector2 barb_l = {end.x + bx_l * BARB_LEN / ARROW_LEN, end.y + by_l * BARB_LEN / ARROW_LEN};
+				float bx_r = dx * cosf(BARB_ANGLE) - dy * sinf(BARB_ANGLE);
+				float by_r = dx * sinf(BARB_ANGLE) + dy * cosf(BARB_ANGLE);
+				float bx_l = dx * cosf(-BARB_ANGLE) - dy * sinf(-BARB_ANGLE);
+				float by_l = dx * sinf(-BARB_ANGLE) + dy * cosf(-BARB_ANGLE);
 
-			DrawLineEx(end, barb_r, ARROW_THICK, RAYWHITE);
-			DrawLineEx(end, barb_l, ARROW_THICK, RAYWHITE);
+				Vector2 barb_r = {end.x + bx_r * BARB_LEN / ARROW_LEN, end.y + by_r * BARB_LEN / ARROW_LEN};
+				Vector2 barb_l = {end.x + bx_l * BARB_LEN / ARROW_LEN, end.y + by_l * BARB_LEN / ARROW_LEN};
 
-			// Text
-			// char buf[8] = {0};
-			// snprintf(buf, sizeof(buf), "%.2f", magnitude);
-			// int text_width = MeasureText(buf, FONT_SIZE);
+				DrawLineEx(end, barb_r, ARROW_THICK, RAYWHITE);
+				DrawLineEx(end, barb_l, ARROW_THICK, RAYWHITE);
+			}
+		}
 
-			// DrawText(buf, x + ((CELL_W - text_width) / 2), y + (CELL_H / 2), FONT_SIZE, BLACK);
+	for (int i = 0; i < ROWS; i++)
+		for (int j = 0; j < COLS; j++)
+		{
+			if (g_charges[i][j] == 0)
+				continue;
+			int cx = j * CELL_W + CELL_W / 2;
+			int cy = i * CELL_H + CELL_H / 2;
+			Color cc = g_charges[i][j] > 0 ? RED : BLUE;
+			DrawCircle(cx, cy, CELL_W * 0.3f, cc);
 		}
 }
 
@@ -145,13 +163,14 @@ int main(void)
 	InitWindow(WIDTH, HEIGHT, "Electric Field Visualizer");
 	SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
 
-	srand(time(NULL));
-	init_charges();
+	zero_charges();
 
 	while (!WindowShouldClose())
 	{
+		handle_input();
+
 		BeginDrawing();
-		ClearBackground(RAYWHITE);
+		ClearBackground(BLACK);
 		zero_field();
 		update_field();
 		draw_grid();
@@ -159,6 +178,5 @@ int main(void)
 	}
 
 	CloseWindow();
-
 	return 0;
 }
