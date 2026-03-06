@@ -33,13 +33,14 @@ Field magnitude is normalized across the grid and mapped to a black -> yellow he
 | Click existing charge | Remove it                  |
 | R                     | Clear all charges          |
 
-## Building
+## Usage
 
 Requires raylib installed on your system.
 
 ```bash
-gcc main.c -o efield -lraylib -lm
-./efield
+git clone https://github.com/UniquePython/e-field-visualizer
+cd e-field-visualizer
+make > /dev/null && bin/e-field-visualizer
 ```
 
 ## Dependencies
