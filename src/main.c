@@ -17,6 +17,30 @@
 
 float g_field[ROWS][COLS], g_charges[ROWS][COLS];
 
+void find_min_max(float *min, float *max)
+{
+	*min = 0;
+	*max = 0;
+
+	for (int i = 0; i < ROWS; i++)
+		for (int j = 0; j < COLS; j++)
+		{
+			if (g_field[i][j] > *max)
+				*max = g_field[i][j];
+
+			if (g_field[i][j] < *min)
+				*min = g_field[i][j];
+		}
+}
+
+float normalize(float min, float max, float val)
+{
+	float delta = max - min;
+	if (delta == 0)
+		return 1.0f;
+	return (val - min) / delta;
+}
+
 void init_charges(void)
 {
 	for (int i = 0; i < ROWS; i++)
@@ -52,12 +76,17 @@ void update_field(void)
 
 void draw_grid(void)
 {
+	float min, max;
+	find_min_max(&min, &max);
+
 	for (int i = 0; i < ROWS; i++)
 		for (int j = 0; j < COLS; j++)
 		{
 			int x = j * CELL_W;
 			int y = i * CELL_H;
 
+			Color c = ColorLerp(BLUE, RED, normalize(min, max, g_field[i][j]));
+			DrawRectangle(x, y, CELL_W, CELL_H, c);
 			DrawRectangleLines(x, y, CELL_W, CELL_H, GRAY);
 
 			char buf[8] = {0};
