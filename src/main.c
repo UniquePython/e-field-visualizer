@@ -101,9 +101,9 @@ void draw_grid(void)
 			float magnitude = sqrtf(powf(g_field_x[i][j], 2.0f) + powf(g_field_y[i][j], 2.0f));
 
 			// Heatmap
-			Color c = ColorLerp(BLUE, RED, normalize(min, max, magnitude));
+			Color c = ColorLerp(BLACK, YELLOW, normalize(min, max, magnitude));
 			DrawRectangle(x, y, CELL_W, CELL_H, c);
-			DrawRectangleLines(x, y, CELL_W, CELL_H, GRAY);
+			// DrawRectangleLines(x, y, CELL_W, CELL_H, GRAY);
 
 			// Arrow
 			float cx = x + CELL_W / 2.0f;
